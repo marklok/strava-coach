@@ -41,7 +41,16 @@ class FitnessTests(unittest.TestCase):
     def test_standard_distance_is_suggested_without_race_label(self):
         today=date(2030,1,14);tz=ZoneInfo("UTC")
         candidates=race_candidates([activity(today-timedelta(days=20),21.3,"Sunday run",None,5407)],today,tz)
-        self.assertEqual(candidates[0]["confidence"],"distance_match")
+        self.assertEqual(candidates[0]["confidence"],"fastest_distance_match")
+
+    def test_only_fastest_unlabelled_match_per_distance_is_suggested(self):
+        today=date(2030,1,14);tz=ZoneInfo("UTC")
+        candidates=race_candidates([
+            activity(today-timedelta(days=20),10.1,"Morning run",None,2700),
+            activity(today-timedelta(days=10),10.2,"Evening run",None,2500),
+        ],today,tz)
+        self.assertEqual(len(candidates),1)
+        self.assertEqual(candidates[0]["name"],"Evening run")
 
 
 class DraftTests(unittest.TestCase):
@@ -60,6 +69,17 @@ class DraftTests(unittest.TestCase):
         b=draft_marathon_plan(input_data(goal_seconds=4*3600),date(2030,1,1))
         self.assertEqual(a["paces"],b["paces"])
         self.assertNotEqual(a["config"]["goal"]["target_seconds"],b["config"]["goal"]["target_seconds"])
+
+    def test_runner_can_choose_a_future_programme_start(self):
+        data=input_data();data["start_date"]="2030-02-03"
+        draft=draft_marathon_plan(data,date(2030,1,1))
+        self.assertEqual(draft["config"]["plan_settings"]["requested_start_date"],"2030-02-03")
+        self.assertEqual(draft["config"]["weeks"][0]["start"],"2030-02-04")
+
+    def test_programme_cannot_start_in_the_past(self):
+        data=input_data();data["start_date"]="2029-12-31"
+        with self.assertRaisesRegex(ValueError,"cannot be in the past"):
+            draft_marathon_plan(data,date(2030,1,1))
 
     def test_all_levels_generate_valid_editable_drafts(self):
         drafts={level:draft_marathon_plan(input_data(level),date(2030,1,1))
