@@ -4,14 +4,15 @@
 
 This repository contains reusable code and synthetic fixtures. Real activities,
 credentials, race plans, check-ins, reports, and history belong in private runtime
-storage. Strava Coach is a single-user command-line tool, not a hosted service or
-credential vault.
+storage. Strava Coach is a single-user command-line and loopback-browser tool, not
+a hosted service or multi-user credential vault.
 
 ## Data flow
 
 | Action | Destination | Data sent |
 | --- | --- | --- |
 | Normal report | Strava | OAuth refresh request and authenticated activity reads |
+| Local setup | Strava | OAuth authorization and recent activity reads after consent |
 | `--send` | Gmail and recipient mail provider | Full HTML and text report |
 | `--ai` | Anthropic | Documented coaching payload below |
 | Offline example | None | Reads synthetic local files only |
@@ -28,6 +29,12 @@ Activity names, notes, and plan context can still contain private free text.
   offline reports cannot enable them.
 - The OAuth helper uses a random state value, a loopback callback, a one-time code,
   and least-privilege activity scope by default. `--read-private` is explicit.
+- The macOS setup app stores the Strava client secret in the current user's login
+  Keychain. Existing command-line installations may still use an owner-only JSON
+  credential file or environment variables.
+- The setup server binds to `127.0.0.1`, validates Host and Origin, adds a random
+  per-launch request token, sets a restrictive Content Security Policy, disables
+  caching, limits request bodies, and writes no HTTP access log.
 - Tokens and reports use atomic replacement and owner-only file modes. Authenticated
   provider requests verify TLS, use bounded timeouts, and reject redirects.
 - Tokens are sent in headers or request bodies, never query strings. Provider
@@ -40,8 +47,9 @@ Activity names, notes, and plan context can still contain private free text.
 
 ## Residual risks
 
-File permissions are not encryption and cannot protect a compromised computer or
-user account. Anyone with access to the report or its recipient mailbox can read
+OAuth tokens and plan files are protected by filesystem permissions, not encrypted
+by the application, and cannot withstand a compromised computer or user account.
+Anyone with access to the report or its recipient mailbox can read
 the included health and training information. Opt-in AI sends the payload above to
 Anthropic. Model output is interpretation rather than verified medical or coaching
 advice.
