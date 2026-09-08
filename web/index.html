@@ -18,7 +18,8 @@
       <p class="eyebrow">YOUR MARATHON, BUILT FROM YOUR RUNNING</p>
       <h1>A plan that starts<br>where you are.</h1>
       <p class="lede">Connect Strava, confirm your current fitness and create an editable marathon programme based on Daniels-style principles.</p>
-      <div class="hero-actions"><button data-go="goal" class="primary">Start your plan <span>→</span></button><span>12+ weeks · established runners</span></div>
+      <div class="hero-actions"><button data-go="goal" class="primary">Start your plan <span>→</span></button><button id="open-dashboard-home" class="secondary hidden">Open my dashboard</button><span>12+ weeks · established runners</span></div>
+      <p id="home-status" class="form-error" role="alert"></p>
     </section>
 
     <section id="wizard" class="wizard hidden">
@@ -36,6 +37,7 @@
           <label class="field wide"><span>Find a marathon</span><input id="race-search" autocomplete="off" placeholder="Search race, city or country"><div id="race-results" class="results"></div></label>
           <label class="field"><span>Marathon name</span><input id="race-name" placeholder="My marathon" required></label>
           <label class="field"><span>Race date</span><input id="race-date" type="date" required></label>
+          <label class="field"><span>Programme start</span><input id="start-date" type="date" required><small>The first training week begins on the next Monday.</small></label>
           <label class="field"><span>Goal hours</span><input id="goal-hours" type="number" min="2" max="8" value="3"></label>
           <label class="field"><span>Goal minutes</span><input id="goal-minutes" type="number" min="0" max="59" value="30"></label>
         </div>
@@ -102,6 +104,20 @@
         <div id="weeks" class="weeks"></div>
         <div class="actions"><button data-back="preferences" class="ghost">Revise inputs</button><button id="save" class="primary">Accept and save locally</button></div>
         <p id="save-status" class="source"></p>
+        <section id="after-save" class="after-save hidden">
+          <div><p class="eyebrow">YOUR COACH IS READY</p><h3>See the weekly dashboard</h3><p>Refresh it from Strava to see last week, matched-heart-rate pace, the coming week, and the remaining programme in the same layout as the email.</p></div>
+          <label class="check"><input id="dashboard-ai" type="checkbox"> Include AI coaching</label>
+          <button id="open-dashboard" class="primary">Refresh and open dashboard <span>→</span></button>
+          <div class="divider"><span>EMAIL DELIVERY</span></div>
+          <p>Gmail requires a Google app password. The password stays in macOS Keychain.</p>
+          <div class="grid two">
+            <label class="field"><span>Gmail address</span><input id="email-sender" type="email" autocomplete="email"></label>
+            <label class="field"><span>Send dashboard to</span><input id="email-recipient" type="email" autocomplete="email"></label>
+            <label class="field wide"><span>Google app password</span><input id="email-password" type="password" autocomplete="off"><small><a href="https://support.google.com/accounts/answer/185833" target="_blank" rel="noreferrer">How to create a Google app password ↗</a></small></label>
+          </div>
+          <div class="inline-actions"><button id="save-email" class="secondary">Save email settings</button><button id="send-dashboard" class="secondary">Send dashboard now</button></div>
+          <p id="dashboard-status" class="form-error" role="status"></p>
+        </section>
       </div>
     </section>
   </main>
