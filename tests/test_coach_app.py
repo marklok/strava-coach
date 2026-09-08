@@ -1,4 +1,5 @@
 import unittest
+from datetime import date
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
@@ -8,6 +9,7 @@ import strava_coach
 import coach_app
 from coach_app import Handler
 from private_data import read_keychain_secret, store_keychain_secret, write_json
+from plan_generator import draft_marathon_plan
 
 
 class LocalAppTests(unittest.TestCase):
@@ -50,6 +52,19 @@ class LocalAppTests(unittest.TestCase):
                  patch.object(coach_app,"build_report",return_value=("<html>dashboard</html>","dashboard",{})):
                 self.handler._build_dashboard({})
             self.assertEqual((state/"reports"/"report.html").read_text(),"<html>dashboard</html>")
+
+    def test_saved_plan_can_be_loaded_without_repeating_onboarding(self):
+        data={"race_name":"Example Marathon","race_date":"2030-05-19","start_date":"2030-02-03",
+              "goal_seconds":10800,"benchmark":{"name":"Example Half","distance_km":21.0975,
+              "seconds":5400,"date":"2029-10-01"},"weekly_km":40,"runs_per_week":4,
+              "long_run_km":18,"history_weeks":8,"run_days":[1,3,5,6],"long_run_day":6,
+              "aggressiveness":"balanced","timezone":"UTC"}
+        draft=draft_marathon_plan(data,date(2030,1,1))
+        with tempfile.TemporaryDirectory() as directory:
+            self.handler.server.state_dir=Path(directory);write_json(Path(directory)/"coach_config.json",draft["config"])
+            captured=[];self.handler._json=captured.append;self.handler._saved_plan()
+            self.assertEqual(captured[0]["config"]["goal"]["race_name"],"Example Marathon")
+            self.assertEqual(captured[0]["vdot"],draft["vdot"])
 
 
 class KeychainTests(unittest.TestCase):
