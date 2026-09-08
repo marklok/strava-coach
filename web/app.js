@@ -4,7 +4,7 @@ const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const $=id=>document.getElementById(id);
 const value=id=>$(id).value;
 const number=id=>Number(value(id));
-const persistedFields=['race-search','race-name','race-date','goal-hours','goal-minutes','benchmark-distance','benchmark-date','benchmark-hours','benchmark-minutes','benchmark-seconds','weekly-km','runs-week','long-run','long-day','context'];
+const persistedFields=['race-search','race-name','race-date','start-date','goal-hours','goal-minutes','benchmark-distance','benchmark-date','benchmark-hours','benchmark-minutes','benchmark-seconds','weekly-km','runs-week','long-run','long-day','context'];
 
 async function api(path,body){
   const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json','X-Coach-Token':token},body:JSON.stringify(body||{})});
@@ -29,6 +29,8 @@ days.forEach((day,index)=>{
   const label=document.createElement('label');label.innerHTML=`<input type="checkbox" value="${index}" ${[1,3,5,6].includes(index)?'checked':''}><span>${day}</span>`;$('days').append(label);
   const option=document.createElement('option');option.value=index;option.textContent=day;if(index===6)option.selected=true;$('long-day').append(option);
 });
+function localISODate(){const now=new Date();return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`}
+$('start-date').value=localISODate();$('start-date').min=localISODate();
 
 function rememberInputs(){
   const fields=Object.fromEntries(persistedFields.map(id=>[id,value(id)]));
@@ -70,13 +72,15 @@ $('connect-strava').addEventListener('click',async()=>{
 });
 
 async function loadStrava(){
-  $('strava-data').className='notice';$('strava-data').textContent='Reading your recent Strava training…';
+  $('strava-data').className='race-list';$('strava-data').textContent='Reading your recent Strava training…';
   try{
     const data=await api('/api/strava/analyse',{timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'});state.strava=data;
     $('weekly-km').value=data.baseline.median_weekly_km;$('runs-week').value=data.baseline.runs_per_week;$('long-run').value=data.baseline.longest_run_km;
     $('strava-data').textContent='';const title=document.createElement('strong');title.textContent=`Connected · ${data.race_candidates.length} possible recent race${data.race_candidates.length===1?'':'s'}`;$('strava-data').append(title);
+    const explanation=document.createElement('p');explanation.textContent='From the last 12 months: activities marked or named as races appear first. If those labels are missing, the fastest run within 5% of each standard distance appears once as a fallback. Confirm the correct result below.';$('strava-data').append(explanation);
     if(!data.race_candidates.length){const copy=document.createElement('p');copy.textContent='Training data was found, but no run in the last year was close to a standard race distance. Enter a result below.';$('strava-data').append(copy)}
-    data.race_candidates.forEach((race,index)=>{const button=document.createElement('button');button.className='result';const kind=race.confidence==='likely_race'?'Likely race':'Distance match';button.textContent=`${kind} · ${race.date} · ${race.name} · ${race.distance_label} · ${race.recorded_seconds?clock(race.recorded_seconds):'time unavailable'}`;button.addEventListener('click',()=>{ $('benchmark-distance').value=race.distance_km;$('benchmark-date').value=race.date;if(race.recorded_seconds){$('benchmark-hours').value=Math.floor(race.recorded_seconds/3600);$('benchmark-minutes').value=Math.floor(race.recorded_seconds%3600/60);$('benchmark-seconds').value=race.recorded_seconds%60}});$('strava-data').append(button)});
+    if(data.race_candidates.length){const header=document.createElement('div');header.className='race-row race-header';['Date','Activity','Distance','Time','Match'].forEach(x=>{const cell=document.createElement('span');cell.textContent=x;header.append(cell)});$('strava-data').append(header)}
+    data.race_candidates.forEach(race=>{const button=document.createElement('button');button.className='race-row';const values=[race.date,race.name,`${race.recorded_km} km`,race.recorded_seconds?clock(race.recorded_seconds):'—',race.confidence==='likely_race'?'Race label':'Fastest match'];values.forEach(x=>{const cell=document.createElement('span');cell.textContent=x;button.append(cell)});button.addEventListener('click',()=>{document.querySelectorAll('.race-row.selected').forEach(x=>x.classList.remove('selected'));button.classList.add('selected');$('benchmark-distance').value=race.distance_km;$('benchmark-date').value=race.date;if(race.recorded_seconds){$('benchmark-hours').value=Math.floor(race.recorded_seconds/3600);$('benchmark-minutes').value=Math.floor(race.recorded_seconds%3600/60);$('benchmark-seconds').value=race.recorded_seconds%60}});$('strava-data').append(button)});
   }catch(error){$('strava-data').className='notice error';$('strava-data').textContent=error.message}
 }
 if(new URLSearchParams(location.search).get('strava')==='connected'){restoreInputs();showStep('fitness');loadStrava();sessionStorage.removeItem('coach-onboarding')}
@@ -89,7 +93,7 @@ function updateReadiness(){
 
 function formData(){
   const runDays=[...document.querySelectorAll('#days input:checked')].map(x=>Number(x.value));
-  return {race_name:value('race-name').trim(),race_date:value('race-date'),goal_seconds:seconds(number('goal-hours'),number('goal-minutes')),
+  return {race_name:value('race-name').trim(),race_date:value('race-date'),start_date:value('start-date'),goal_seconds:seconds(number('goal-hours'),number('goal-minutes')),
     benchmark:{name:'Confirmed race result',distance_km:number('benchmark-distance'),date:value('benchmark-date'),seconds:seconds(number('benchmark-hours'),number('benchmark-minutes'),number('benchmark-seconds'))},
     weekly_km:number('weekly-km'),runs_per_week:number('runs-week'),long_run_km:number('long-run'),history_weeks:state.strava?state.strava.baseline.active_weeks:8,
     run_days:runDays,long_run_day:number('long-day'),aggressiveness:document.querySelector('input[name="risk"]:checked').value,context:value('context'),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'};
@@ -105,6 +109,17 @@ function renderDraft(draft){
   $('weeks').textContent='';draft.config.weeks.forEach(week=>{const longest=Math.max(0,...week.workouts.filter(x=>x.long_run||x.race).map(x=>x.segments.reduce((sum,s)=>sum+s.km*(s.repeats||1)+(s.recovery_km||0)*((s.repeats||1)-1),0)));const row=document.createElement('div');row.className='week';row.innerHTML=`<strong>W${week.number}</strong><span>${week.start}</span><b>${escapeText(week.phase)}</b><span>${week.training_km} km</span><strong>${longest?longest.toFixed(1)+' km':'—'}</strong>`;$('weeks').append(row)});
 }
 $('save').addEventListener('click',async()=>{
-  try{await api('/api/save',{config:state.draft.config,anthropic_api_key:value('anthropic-key')});$('anthropic-key').value='';$('save-status').className='source success';$('save-status').textContent='Draft saved privately. It is ready for your weekly dashboard.'}
+  try{await api('/api/save',{config:state.draft.config,anthropic_api_key:value('anthropic-key')});$('anthropic-key').value='';$('save-status').className='source success';$('save-status').textContent='Draft saved privately.';$('after-save').classList.remove('hidden');$('after-save').scrollIntoView({behavior:'smooth',block:'start'})}
   catch(error){$('save-status').className='source error';$('save-status').textContent=error.message}
 });
+
+async function dashboard(send=false){
+  const status=send?$('dashboard-status'):$('home-status');status.className='form-error';status.textContent=send?'Preparing and sending your dashboard…':'Refreshing your dashboard from Strava…';
+  try{const data=await api('/api/dashboard',{use_ai:$('dashboard-ai').checked,send});if(send){status.className='source success';status.textContent='Dashboard sent.'}else{location.href=data.url}}
+  catch(error){status.textContent=error.message}
+}
+$('open-dashboard').addEventListener('click',()=>dashboard(false));
+$('open-dashboard-home').addEventListener('click',()=>dashboard(false));
+$('save-email').addEventListener('click',async()=>{const status=$('dashboard-status');try{await api('/api/email/save',{sender:value('email-sender'),recipient:value('email-recipient'),app_password:value('email-password')});$('email-password').value='';status.className='source success';status.textContent='Email settings saved in private local storage and macOS Keychain.'}catch(error){status.className='form-error';status.textContent=error.message}});
+$('send-dashboard').addEventListener('click',()=>dashboard(true));
+fetch('/api/status').then(r=>r.json()).then(data=>{if(data.plan_saved&&data.strava_connected)$('open-dashboard-home').classList.remove('hidden')});
