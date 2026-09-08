@@ -34,13 +34,13 @@ Your browser opens a five-step private setup:
    weeks of recent training.
 3. Confirm weekly distance, run frequency, and recent long-run distance. Gaps from
    the suggested foundation are shown as advice and do not lock you out.
-4. Choose Conservative, Balanced, or Aggressive progression, running days, and add
-   personal context.
+4. Choose Conservative, Balanced, or Aggressive progression, running days, add
+   personal context, and optionally store an Anthropic API key for AI commentary.
 5. Review the draft, current-fitness training paces, weekly distance, and longest
    run before saving to `.private/coach_config.json`.
 
-The Strava client secret entered in the setup app is stored in macOS Keychain. OAuth
-tokens and the plan use owner-only files under `.private/`. The app listens only on
+The Strava client secret and optional Anthropic key entered in the setup app are
+stored in macOS Keychain. OAuth tokens and the plan use owner-only files under `.private/`. The app listens only on
 your Mac at `127.0.0.1`; stop it with Control-C when setup is complete. Use
 `python coach_app.py --port 9000` if port 8765 is occupied.
 
