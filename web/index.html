@@ -18,7 +18,11 @@
       <p class="eyebrow">YOUR MARATHON, BUILT FROM YOUR RUNNING</p>
       <h1>A plan that starts<br>where you are.</h1>
       <p class="lede">Connect Strava, confirm your current fitness and create an editable marathon programme based on Daniels-style principles.</p>
-      <div class="hero-actions"><button data-go="goal" class="primary">Start your plan <span>→</span></button><button id="open-dashboard-home" class="secondary hidden">Open my dashboard</button><span>12+ weeks · established runners</span></div>
+      <div class="hero-actions"><button data-go="goal" class="primary">Start a new plan <span>→</span></button><span>12+ weeks · established runners</span></div>
+      <div id="saved-plan-actions" class="saved-callout hidden">
+        <div><strong>Saved plan found</strong><p>Continue with the programme already stored privately on this Mac.</p></div>
+        <div class="inline-actions"><button id="open-dashboard-home" class="primary">Refresh and open dashboard <span>→</span></button><button id="review-saved" class="secondary">Review saved plan</button></div>
+      </div>
       <p id="home-status" class="form-error" role="alert"></p>
     </section>
 
@@ -121,6 +125,9 @@
       </div>
     </section>
   </main>
+  <div id="dashboard-loading" class="loading-screen hidden" role="status" aria-live="polite">
+    <div class="loading-card"><span class="loading-mark"></span><p class="eyebrow">BUILDING YOUR DASHBOARD</p><h2 id="loading-title">Reading your latest Strava data…</h2><div class="loading-track"><span></span></div><p>This can take a little while. Keep this window open.</p></div>
+  </div>
   <footer class="shell"><span>PRIVATE BY DEFAULT</span><span>Open-source marathon planning</span></footer>
   <script src="/app.js" defer></script>
 </body>
