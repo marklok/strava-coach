@@ -42,6 +42,8 @@ def credentials(state):
     if not values.get('client_secret') and saved.get('client_secret_keychain') and values.get('client_id'):
         values['client_secret']=read_keychain_secret(f"strava:{values['client_id']}")
     values['anthropic_api_key']=os.environ.get('ANTHROPIC_API_KEY') or ai_saved.get('anthropic_api_key')
+    if not values['anthropic_api_key'] and ai_saved.get('anthropic_api_keychain'):
+        values['anthropic_api_key']=read_keychain_secret('anthropic')
     return values
 
 
