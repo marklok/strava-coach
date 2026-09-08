@@ -29,9 +29,9 @@ Activity names, notes, and plan context can still contain private free text.
   offline reports cannot enable them.
 - The OAuth helper uses a random state value, a loopback callback, a one-time code,
   and least-privilege activity scope by default. `--read-private` is explicit.
-- The macOS setup app stores the Strava client secret in the current user's login
-  Keychain. Existing command-line installations may still use an owner-only JSON
-  credential file or environment variables.
+- The macOS setup app stores the Strava client secret and optional Anthropic API
+  key in the current user's login Keychain. Existing command-line installations
+  may still use an owner-only JSON credential file or environment variables.
 - The setup server binds to `127.0.0.1`, validates Host and Origin, adds a random
   per-launch request token, sets a restrictive Content Security Policy, disables
   caching, limits request bodies, and writes no HTTP access log.
