@@ -49,6 +49,10 @@ Gmail address, recipient, and Google app password, then send the current dashboa
 Client secrets, Anthropic keys, and Gmail app passwords entered in the app stay in
 macOS Keychain.
 
+On later launches, the start screen detects `.private/coach_config.json` and offers
+**Review saved plan** as well as **Refresh and open dashboard**. Dashboard refreshes
+show a progress panel while Strava and optional AI processing are running.
+
 The Strava client secret and optional Anthropic key entered in the setup app are
 stored in macOS Keychain. OAuth tokens and the plan use owner-only files under `.private/`. The app listens only on
 your Mac at `127.0.0.1`; stop it with Control-C when setup is complete. Use
