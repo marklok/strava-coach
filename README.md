@@ -10,6 +10,49 @@ no built-in athlete, race target, or training plan. Your credentials, activities
 reports, and programme stay in an ignored `.private/` directory on your computer.
 The files under `examples/` contain fictional data.
 
+## Create a marathon plan on macOS
+
+The local setup app is the simplest way to start. It supports established runners
+with a marathon at least 12 weeks away.
+
+```sh
+git clone https://github.com/marklok/strava-coach.git
+cd strava-coach
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python coach_app.py
+```
+
+Your browser opens a five-step private setup:
+
+1. Choose from 40 common Nordic, European, and US marathons, or enter another race.
+   A date is filled only when the organiser has published and the catalog has
+   verified that edition; otherwise the app links to the official race site.
+2. Connect Strava or enter a recent 5K, 10K, half-marathon, or marathon result.
+   Strava suggests likely races from the last year and measures eight complete
+   weeks of recent training.
+3. Confirm weekly distance, run frequency, and recent long-run distance. Gaps from
+   the suggested foundation are shown as advice and do not lock you out.
+4. Choose Conservative, Balanced, or Aggressive progression, running days, and add
+   personal context.
+5. Review the draft, current-fitness training paces, weekly distance, and longest
+   run before saving to `.private/coach_config.json`.
+
+The Strava client secret entered in the setup app is stored in macOS Keychain. OAuth
+tokens and the plan use owner-only files under `.private/`. The app listens only on
+your Mac at `127.0.0.1`; stop it with Control-C when setup is complete. Use
+`python coach_app.py --port 9000` if port 8765 is occupied.
+
+The generator uses the published Daniels/Gilbert performance equation to estimate
+VDOT and derives E, M, T, I, and R pace ranges from the confirmed current result.
+Goal time is kept as an ambition and never used to manufacture training paces.
+The schedule combines one controlled threshold session, mostly easy running,
+progressive long runs, periodic recovery weeks, marathon-pace work, and a two- or
+three-week taper depending on the selected approach. A lead time over 24 weeks gets
+a separate base-conditioning period. This project is independently developed and
+is not affiliated with or endorsed by Jack Daniels or the VDOT organization.
+
 ## Try the example
 
 You need Python 3.11 or newer. This first run is offline and cannot send email or
@@ -29,7 +72,7 @@ python strava_coach.py --dry-run --date 2030-01-13 \
 Open `.private/reports/report.html` to see the example dashboard. On Windows,
 activate the environment with `.venv\Scripts\activate`.
 
-## Connect Strava
+## Command-line Strava setup
 
 1. Create an application in [Strava API settings](https://www.strava.com/settings/api).
    Set its **Authorization Callback Domain** to `localhost`.
@@ -72,11 +115,13 @@ Environment variables can replace credential-file values:
 Environment variables take precedence. Avoid putting secret values directly in
 commands, shell history, public CI settings, or issue reports.
 
-## Add your programme
+## Add or edit your programme
 
 Edit `.private/coach_config.json`. The synthetic
 [example configuration](examples/coach_config.json) is the full schema and can be
 used as a starting point. Use `{}` if you only want activity statistics.
+The local setup app can generate this file for you; it remains a draft so you can
+edit or replace any week before relying on it.
 
 - `timezone` is an IANA timezone such as `Europe/Copenhagen`.
 - `language` controls optional AI commentary.
