@@ -2,7 +2,8 @@
 """Local-only browser interface for onboarding and marathon-plan drafting."""
 
 import argparse
-from datetime import date
+from datetime import date, datetime, timedelta
+from email.utils import parseaddr
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import hmac
 import json
@@ -15,9 +16,12 @@ from zoneinfo import ZoneInfo
 
 from authorize_strava import authorization_url, exchange_code, persist_tokens, validate_scope
 from plan_generator import analyse_training, draft_marathon_plan, race_candidates
-from private_data import read_json, write_json, store_keychain_secret, read_keychain_secret
+from private_data import (read_json, write_json, store_keychain_secret, read_keychain_secret,
+                          private_write)
 from race_catalog import public_catalog
-from strava_coach import credentials, fetch_runs_since, get_token
+from strava_coach import (credentials, fetch_runs_since, get_token, fetch_runs, enrich_runs,
+                          build_report, send_email)
+from training_metrics import report_end, get_week_runs
 from training_plan import load_plan
 
 
@@ -106,8 +110,13 @@ class Handler(BaseHTTPRequestHandler):
         elif parsed.path == "/api/catalog":
             self._json({"races": public_catalog()})
         elif parsed.path == "/api/status":
+            saved = read_json(self.server.state_dir / "credentials.json")
             self._json({"strava_connected": (self.server.state_dir / "tokens.json").is_file(),
-                        "plan_saved": (self.server.state_dir / "coach_config.json").is_file()})
+                        "plan_saved": (self.server.state_dir / "coach_config.json").is_file(),
+                        "dashboard_ready": (self.server.state_dir / "reports" / "report.html").is_file(),
+                        "email_configured": bool(saved.get("gmail_sender") and saved.get("email_to"))})
+        elif parsed.path == "/dashboard":
+            self._dashboard_file()
         elif parsed.path == "/oauth/callback":
             self._oauth_callback(parse_qs(parsed.query))
         else:
@@ -164,6 +173,10 @@ class Handler(BaseHTTPRequestHandler):
                                {"anthropic_api_keychain": True})
                 write_json(self.server.state_dir / "coach_config.json", config)
                 self._json({"saved": True})
+            elif self.path == "/api/dashboard":
+                self._build_dashboard(payload)
+            elif self.path == "/api/email/save":
+                self._save_email(payload)
             else:
                 self._json({"error": "Not found"}, 404)
         except (ValueError, RuntimeError, KeyError) as exc:
@@ -197,6 +210,73 @@ class Handler(BaseHTTPRequestHandler):
         runs = fetch_runs_since(token, today, tz, 53)
         self._json({"baseline": analyse_training(runs, today, tz),
                     "race_candidates": race_candidates(runs, today, tz)})
+
+    def _dashboard_file(self):
+        path = self.server.state_dir / "reports" / "report.html"
+        if not path.is_file():
+            self.send_error(404, "Build the dashboard first")
+            return
+        body = path.read_bytes()
+        body_end = body.find(b">", body.find(b"<body"))
+        if body_end >= 0:
+            nav = (b'<div style="max-width:660px;margin:0 auto;padding:16px 22px 0;'
+                   b'font-family:Arial,sans-serif"><a href="/" style="color:#aaa;'
+                   b'font-size:12px;text-decoration:none">&larr; Setup and settings</a></div>')
+            body = body[:body_end + 1] + nav + body[body_end + 1:]
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _build_dashboard(self, payload):
+        config = read_json(self.server.state_dir / "coach_config.json")
+        load_plan(config)
+        tz = ZoneInfo(config.get("timezone", "UTC"))
+        today = datetime.now(tz).date()
+        end = report_end(today)
+        cfg = credentials(self.server.state_dir)
+        token = get_token(cfg, self.server.state_dir)
+        runs = fetch_runs(token, end, tz)
+        enrich_runs(token, get_week_runs(runs, end - timedelta(days=6), tz))
+        history = read_json(self.server.state_dir / "history.json", [])
+        use_ai = bool(payload.get("use_ai"))
+        if use_ai and not cfg.get("anthropic_api_key"):
+            raise ValueError("Add an Anthropic API key before enabling AI coaching")
+        html, text_report, _entry = build_report(
+            runs, end, config, use_ai=use_ai, history=history,
+            ai_api_key=cfg.get("anthropic_api_key") if use_ai else None,
+        )
+        out = self.server.state_dir / "reports"
+        private_write(out / "report.html", html)
+        private_write(out / "report.txt", text_report)
+        if payload.get("send"):
+            send_email(cfg, html, text_report)
+        self._json({"ready": True, "url": "/dashboard", "sent": bool(payload.get("send"))})
+
+    def _save_email(self, payload):
+        sender = str(payload.get("sender") or "").strip()
+        recipient = str(payload.get("recipient") or "").strip()
+        password = str(payload.get("app_password") or "").replace(" ", "")
+        if parseaddr(sender)[1] != sender or "@" not in sender:
+            raise ValueError("Enter a valid Gmail address")
+        if parseaddr(recipient)[1] != recipient or "@" not in recipient:
+            raise ValueError("Enter a valid recipient email address")
+        saved = read_json(self.server.state_dir / "credentials.json")
+        if password:
+            if not 12 <= len(password) <= 200:
+                raise ValueError("Enter a valid Google app password")
+            store_keychain_secret(f"gmail:{sender}", password)
+            saved["gmail_app_password_keychain"] = True
+        elif not saved.get("gmail_app_password_keychain") and not saved.get("gmail_app_password"):
+            raise ValueError("Enter a Google app password")
+        saved.update({"gmail_sender": sender, "email_to": recipient})
+        saved.pop("gmail_app_password", None)
+        write_json(self.server.state_dir / "credentials.json", saved)
+        self._json({"saved": True})
 
 
 def main(argv=None):
