@@ -114,14 +114,16 @@ def race_candidates(runs, today, tz):
         match = min(RACE_DISTANCES, key=lambda item: abs(item[0] - km))
         marked = run.get("workout_type") == 1
         named = any(word in str(run.get("name", "")).lower() for word in words)
-        if abs(match[0] - km) / match[0] <= .035 and (marked or named):
+        if abs(match[0] - km) / match[0] <= .05:
             candidates.append({
                 "date": run_date.isoformat(), "name": str(run.get("name") or match[1]),
                 "distance_km": match[0], "recorded_km": round(km, 2),
                 "recorded_seconds": run.get("elapsed_time") or run.get("moving_time"),
                 "distance_label": match[1],
+                "confidence": "likely_race" if marked or named else "distance_match",
             })
-    return sorted(candidates, key=lambda item: item["date"], reverse=True)[:12]
+    return sorted(candidates, key=lambda item: (item["confidence"] == "likely_race", item["date"]),
+                  reverse=True)[:12]
 
 
 def readiness(baseline):
@@ -206,7 +208,10 @@ def _draft_workouts(total_km, phase, run_days, long_day, long_km, week_index, ag
 
 def draft_marathon_plan(data, today=None):
     today = today or date.today()
-    race_date = date.fromisoformat(data["race_date"])
+    try:
+        race_date = date.fromisoformat(str(data.get("race_date", "")))
+    except ValueError:
+        raise ValueError("Choose your marathon and enter its race date") from None
     first_monday = _monday_on_or_after(today)
     race_monday = race_date - timedelta(days=race_date.weekday())
     weeks = (race_monday - first_monday).days // 7 + 1
@@ -227,9 +232,12 @@ def draft_marathon_plan(data, today=None):
     long_day = int(data.get("long_run_day", 6))
     if len(set(run_days)) < 2 or any(day < 0 or day > 6 for day in run_days) or long_day not in run_days:
         raise ValueError("Choose valid running days including the long-run day")
-    benchmark = data["benchmark"]
-    benchmark_seconds = int(benchmark["seconds"])
-    benchmark_date = date.fromisoformat(benchmark["date"])
+    benchmark = data.get("benchmark") or {}
+    try:
+        benchmark_seconds = int(benchmark["seconds"])
+        benchmark_date = date.fromisoformat(str(benchmark.get("date", "")))
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("Choose a recent race result and enter its date and finish time") from None
     if benchmark_date > today or benchmark_date < today - timedelta(days=730):
         raise ValueError("Use a benchmark race from the last two years")
     if not str(data.get("race_name", "")).strip():
