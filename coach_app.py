@@ -15,7 +15,8 @@ import webbrowser
 from zoneinfo import ZoneInfo
 
 from authorize_strava import authorization_url, exchange_code, persist_tokens, validate_scope
-from plan_generator import analyse_training, draft_marathon_plan, race_candidates
+from plan_generator import (analyse_training, draft_marathon_plan, race_candidates,
+                            training_paces, equivalent_time, readiness, MARATHON_KM)
 from private_data import (read_json, write_json, store_keychain_secret, read_keychain_secret,
                           private_write)
 from race_catalog import public_catalog
@@ -175,6 +176,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"saved": True})
             elif self.path == "/api/dashboard":
                 self._build_dashboard(payload)
+            elif self.path == "/api/plan/saved":
+                self._saved_plan()
             elif self.path == "/api/email/save":
                 self._save_email(payload)
             else:
@@ -277,6 +280,33 @@ class Handler(BaseHTTPRequestHandler):
         saved.pop("gmail_app_password", None)
         write_json(self.server.state_dir / "credentials.json", saved)
         self._json({"saved": True})
+
+    def _saved_plan(self):
+        config = read_json(self.server.state_dir / "coach_config.json")
+        plan = load_plan(config)
+        if not plan:
+            raise ValueError("No saved programme was found")
+        raw_vdot = (config.get("profile") or {}).get("vdot")
+        vdot = raw_vdot.get("value") if isinstance(raw_vdot, dict) else raw_vdot
+        if not isinstance(vdot, (int, float)):
+            raise ValueError("The saved programme does not contain a fitness benchmark")
+        settings = config.get("plan_settings") or {}
+        baseline_keys = ("starting_weekly_km", "starting_runs_per_week",
+                         "starting_long_run_km", "history_weeks")
+        if all(settings.get(key) is not None for key in baseline_keys):
+            baseline = {"weekly_km": settings["starting_weekly_km"],
+                        "runs_per_week": settings["starting_runs_per_week"],
+                        "long_run_km": settings["starting_long_run_km"],
+                        "history_weeks": settings["history_weeks"]}
+            foundation = readiness(baseline)
+        else:
+            foundation = {"status": "Saved programme", "gaps": [], "advisory_only": True}
+        non_race = [week.training_km for week in plan if not week.race_km]
+        self._json({"config": config, "vdot": vdot, "paces": training_paces(vdot),
+                    "readiness": foundation, "weeks": len(plan),
+                    "peak_km": max(non_race, default=0),
+                    "marathon_equivalent_seconds": equivalent_time(vdot, MARATHON_KM),
+                    "warnings": [], "assumptions": ["Loaded from private local storage"]})
 
 
 def main(argv=None):
