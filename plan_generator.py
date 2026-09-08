@@ -334,6 +334,9 @@ def draft_marathon_plan(data, today=None):
         "planning_context": str(data.get("context", ""))[:4000],
         "plan_settings": {"aggressiveness": level.name, "draft": True,
                           "starting_weekly_km": baseline["weekly_km"],
+                          "starting_runs_per_week": baseline["runs_per_week"],
+                          "starting_long_run_km": baseline["long_run_km"],
+                          "history_weeks": baseline["history_weeks"],
                           "requested_start_date": requested_start.isoformat(),
                           "first_training_week": first_monday.isoformat()},
     }
