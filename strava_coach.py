@@ -14,7 +14,8 @@ import time
 from zoneinfo import ZoneInfo
 import requests
 
-from private_data import read_json, config_from_env_or_file, private_write, write_json, mask_secret
+from private_data import (read_json, config_from_env_or_file, private_write, write_json,
+                          mask_secret, read_keychain_secret)
 from training_plan import DAYS, load_plan, get_plan_for_date, schedule_text
 from training_metrics import report_end, get_week_runs, report_metrics, hr_pace_curve, pace, activity_date, RUN_TYPES
 
@@ -38,6 +39,8 @@ def credentials(state):
              'refresh_token':'STRAVA_REFRESH_TOKEN','access_token':'STRAVA_ACCESS_TOKEN',
              'gmail_sender':'GMAIL_SENDER','gmail_app_password':'GMAIL_APP_PASSWORD','email_to':'EMAIL_TO'}
     values={key:os.environ.get(env) or saved.get(key) for key,env in mapping.items()}
+    if not values.get('client_secret') and saved.get('client_secret_keychain') and values.get('client_id'):
+        values['client_secret']=read_keychain_secret(f"strava:{values['client_id']}")
     values['anthropic_api_key']=os.environ.get('ANTHROPIC_API_KEY') or ai_saved.get('anthropic_api_key')
     return values
 
@@ -67,9 +70,9 @@ def get_token(cfg,state):
     return data['access_token']
 
 
-def fetch_runs(token,end,tz):
+def fetch_runs_since(token,end,tz,weeks=16):
     before=datetime.combine(end+timedelta(days=1),datetime.min.time(),tz)
-    after=int((before-timedelta(weeks=16)).timestamp())
+    after=int((before-timedelta(weeks=weeks)).timestamp())
     runs=[]
     for page in range(1,101):
         try:
@@ -102,6 +105,10 @@ def enrich_runs(token,runs):
             # Partial detail failure is visible in the report, never logged with IDs.
             run['detail_unavailable']=True
     return runs
+
+
+def fetch_runs(token,end,tz):
+    return fetch_runs_since(token,end,tz,16)
 
 
 def goal_text(config,end):
