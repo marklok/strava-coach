@@ -114,12 +114,15 @@ $('save').addEventListener('click',async()=>{
 });
 
 async function dashboard(send=false){
-  const status=send?$('dashboard-status'):$('home-status');status.className='form-error';status.textContent=send?'Preparing and sending your dashboard…':'Refreshing your dashboard from Strava…';
-  try{const data=await api('/api/dashboard',{use_ai:$('dashboard-ai').checked,send});if(send){status.className='source success';status.textContent='Dashboard sent.'}else{location.href=data.url}}
-  catch(error){status.textContent=error.message}
+  const status=send?$('dashboard-status'):$('home-status');const loading=$('dashboard-loading');const buttons=[$('open-dashboard'),$('open-dashboard-home'),$('send-dashboard')];
+  status.className='form-error';status.textContent='';$('loading-title').textContent=send?'Preparing and sending your dashboard…':$('dashboard-ai').checked?'Reading Strava and asking the AI coach…':'Reading your latest Strava data…';loading.classList.remove('hidden');buttons.forEach(button=>button.disabled=true);
+  try{const data=await api('/api/dashboard',{use_ai:$('dashboard-ai').checked,send});if(send){loading.classList.add('hidden');status.className='source success';status.textContent='Dashboard sent.'}else{location.href=data.url}}
+  catch(error){loading.classList.add('hidden');status.textContent=error.message}
+  finally{buttons.forEach(button=>button.disabled=false)}
 }
 $('open-dashboard').addEventListener('click',()=>dashboard(false));
 $('open-dashboard-home').addEventListener('click',()=>dashboard(false));
 $('save-email').addEventListener('click',async()=>{const status=$('dashboard-status');try{await api('/api/email/save',{sender:value('email-sender'),recipient:value('email-recipient'),app_password:value('email-password')});$('email-password').value='';status.className='source success';status.textContent='Email settings saved in private local storage and macOS Keychain.'}catch(error){status.className='form-error';status.textContent=error.message}});
 $('send-dashboard').addEventListener('click',()=>dashboard(true));
-fetch('/api/status').then(r=>r.json()).then(data=>{if(data.plan_saved&&data.strava_connected)$('open-dashboard-home').classList.remove('hidden')});
+$('review-saved').addEventListener('click',async()=>{const status=$('home-status');status.textContent='Loading your saved plan…';try{state.draft=await api('/api/plan/saved',{});renderDraft(state.draft);$('after-save').classList.remove('hidden');showStep('draft');status.textContent=''}catch(error){status.textContent=error.message}});
+fetch('/api/status').then(r=>r.json()).then(data=>{if(data.plan_saved)$('saved-plan-actions').classList.remove('hidden');if(data.plan_saved&&!data.strava_connected){$('open-dashboard-home').disabled=true;$('open-dashboard-home').title='Connect Strava to refresh the dashboard'}});
