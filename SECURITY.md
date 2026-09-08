@@ -13,6 +13,7 @@ a hosted service or multi-user credential vault.
 | --- | --- | --- |
 | Normal report | Strava | OAuth refresh request and authenticated activity reads |
 | Local setup | Strava | OAuth authorization and recent activity reads after consent |
+| Live local dashboard | Strava | Authenticated activity reads; activity details for the latest completed week |
 | `--send` | Gmail and recipient mail provider | Full HTML and text report |
 | `--ai` | Anthropic | Documented coaching payload below |
 | Offline example | None | Reads synthetic local files only |
