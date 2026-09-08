@@ -38,11 +38,21 @@ class FitnessTests(unittest.TestCase):
         candidates=race_candidates(runs,today,tz)
         self.assertEqual(candidates[0]["distance_label"],"10K")
 
+    def test_standard_distance_is_suggested_without_race_label(self):
+        today=date(2030,1,14);tz=ZoneInfo("UTC")
+        candidates=race_candidates([activity(today-timedelta(days=20),21.3,"Sunday run",None,5407)],today,tz)
+        self.assertEqual(candidates[0]["confidence"],"distance_match")
+
 
 class DraftTests(unittest.TestCase):
     def test_under_twelve_weeks_is_rejected(self):
         data=input_data();data["race_date"]="2030-03-10"
         with self.assertRaisesRegex(ValueError,"at least 12 weeks"):
+            draft_marathon_plan(data,date(2030,1,1))
+
+    def test_missing_dates_have_user_facing_errors(self):
+        data=input_data();data["benchmark"]["date"]=""
+        with self.assertRaisesRegex(ValueError,"recent race result"):
             draft_marathon_plan(data,date(2030,1,1))
 
     def test_goal_time_does_not_change_training_paces(self):
