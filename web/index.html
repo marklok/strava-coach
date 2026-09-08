@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="coach-token" content="__APP_TOKEN__">
+  <title>Strava Coach</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="shell topbar">
+    <a class="brand" href="#">STRAVA COACH</a>
+    <div class="privacy"><span></span> Local and private</div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">YOUR MARATHON, BUILT FROM YOUR RUNNING</p>
+      <h1>A plan that starts<br>where you are.</h1>
+      <p class="lede">Connect Strava, confirm your current fitness and create an editable marathon programme based on Daniels-style principles.</p>
+      <div class="hero-actions"><button data-go="goal" class="primary">Start your plan <span>→</span></button><span>12+ weeks · established runners</span></div>
+    </section>
+
+    <section id="wizard" class="wizard hidden">
+      <nav class="steps" aria-label="Setup progress">
+        <button class="step active" data-step="goal"><b>01</b> Goal</button>
+        <button class="step" data-step="fitness"><b>02</b> Fitness</button>
+        <button class="step" data-step="training"><b>03</b> Training</button>
+        <button class="step" data-step="preferences"><b>04</b> Preferences</button>
+        <button class="step" data-step="draft"><b>05</b> Draft</button>
+      </nav>
+
+      <div class="panel active" id="goal">
+        <div class="panel-heading"><span>01</span><div><h2>Choose your marathon</h2><p>The race date must be at least 12 weeks away.</p></div></div>
+        <div class="grid two">
+          <label class="field wide"><span>Find a marathon</span><input id="race-search" autocomplete="off" placeholder="Search race, city or country"><div id="race-results" class="results"></div></label>
+          <label class="field"><span>Marathon name</span><input id="race-name" placeholder="My marathon" required></label>
+          <label class="field"><span>Race date</span><input id="race-date" type="date" required></label>
+          <label class="field"><span>Goal hours</span><input id="goal-hours" type="number" min="2" max="8" value="3"></label>
+          <label class="field"><span>Goal minutes</span><input id="goal-minutes" type="number" min="0" max="59" value="30"></label>
+        </div>
+        <p id="race-source" class="source"></p>
+        <div class="actions"><span></span><button data-next="fitness" class="primary">Continue <span>→</span></button></div>
+      </div>
+
+      <div class="panel" id="fitness">
+        <div class="panel-heading"><span>02</span><div><h2>Confirm current fitness</h2><p>Use an official recent result. Goal pace does not set training pace.</p></div></div>
+        <div class="notice"><strong>STRAVA</strong><p>Connect to find likely races from the last 12 months and calculate your recent training baseline.</p><button id="show-strava" class="secondary">Connect Strava</button></div>
+        <div id="strava-box" class="connection hidden">
+          <a href="https://www.strava.com/settings/api" target="_blank" rel="noreferrer">Open Strava API settings ↗</a>
+          <p>Create an API application and set the callback domain to <code>localhost</code>.</p>
+          <div class="grid two"><label class="field"><span>Client ID</span><input id="client-id" inputmode="numeric"></label><label class="field"><span>Client Secret</span><input id="client-secret" type="password"></label></div>
+          <label class="check"><input id="read-private" type="checkbox"> Include activities marked “Only You”</label>
+          <button id="connect-strava" class="secondary">Authorize with Strava</button>
+        </div>
+        <div id="strava-data" class="hidden"></div>
+        <div class="divider"><span>CONFIRMED RESULT</span></div>
+        <div class="grid two">
+          <label class="field"><span>Distance</span><select id="benchmark-distance"><option value="21.0975">Half marathon</option><option value="42.195">Marathon</option><option value="10">10K</option><option value="5">5K</option></select></label>
+          <label class="field"><span>Race date</span><input id="benchmark-date" type="date" required></label>
+          <label class="field"><span>Hours</span><input id="benchmark-hours" type="number" min="0" max="8" value="1"></label>
+          <label class="field"><span>Minutes</span><input id="benchmark-minutes" type="number" min="0" max="59" value="30"></label>
+          <label class="field"><span>Seconds</span><input id="benchmark-seconds" type="number" min="0" max="59" value="0"></label>
+        </div>
+        <div class="actions"><button data-back="goal" class="ghost">Back</button><button data-next="training" class="primary">Continue <span>→</span></button></div>
+      </div>
+
+      <div class="panel" id="training">
+        <div class="panel-heading"><span>03</span><div><h2>Your recent training</h2><p>These values set the opening load. Falling below the reference points does not block your plan.</p></div></div>
+        <div class="grid three">
+          <label class="field"><span>Median km / week</span><input id="weekly-km" type="number" min="10" max="200" value="40"></label>
+          <label class="field"><span>Runs / week</span><input id="runs-week" type="number" min="2" max="7" step="0.5" value="4"></label>
+          <label class="field"><span>Longest recent run</span><input id="long-run" type="number" min="5" max="50" value="18"></label>
+        </div>
+        <div id="readiness" class="readiness"></div>
+        <div class="actions"><button data-back="fitness" class="ghost">Back</button><button data-next="preferences" class="primary">Continue <span>→</span></button></div>
+      </div>
+
+      <div class="panel" id="preferences">
+        <div class="panel-heading"><span>04</span><div><h2>Shape the programme</h2><p>Choose the training stress and tell the coach what the numbers do not show.</p></div></div>
+        <fieldset><legend>Plan aggressiveness</legend><div class="segments">
+          <label><input type="radio" name="risk" value="conservative"><span><b>Conservative</b><small>More recovery</small></span></label>
+          <label><input type="radio" name="risk" value="balanced" checked><span><b>Balanced</b><small>Recommended</small></span></label>
+          <label><input type="radio" name="risk" value="aggressive"><span><b>Aggressive</b><small>Less margin</small></span></label>
+        </div></fieldset>
+        <fieldset><legend>Running days</legend><div class="days" id="days"></div></fieldset>
+        <label class="field"><span>Long-run day</span><select id="long-day"></select></label>
+        <label class="field"><span>Additional context</span><textarea id="context" rows="5" placeholder="Travel, preferred rest days, missing Strava data, previous marathon experience…"></textarea><small>This note is saved locally with the draft.</small></label>
+        <div class="actions"><button data-back="training" class="ghost">Back</button><button id="generate" class="primary">Create draft <span>→</span></button></div>
+        <p id="plan-error" class="source error" role="alert"></p>
+      </div>
+
+      <div class="panel" id="draft">
+        <div class="panel-heading"><span>05</span><div><h2>Your draft programme</h2><p>Review the assumptions before saving. Nothing is sent or scheduled.</p></div></div>
+        <div id="draft-summary"></div>
+        <div id="weeks" class="weeks"></div>
+        <div class="actions"><button data-back="preferences" class="ghost">Revise inputs</button><button id="save" class="primary">Accept and save locally</button></div>
+        <p id="save-status" class="source"></p>
+      </div>
+    </section>
+  </main>
+  <footer class="shell"><span>PRIVATE BY DEFAULT</span><span>Open-source marathon planning</span></footer>
+  <script src="/app.js" defer></script>
+</body>
+</html>
