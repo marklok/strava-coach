@@ -155,6 +155,13 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(config, dict):
                     raise ValueError("Missing plan configuration")
                 load_plan(config)
+                ai_key = str(payload.get("anthropic_api_key") or "").strip()
+                if ai_key:
+                    if not 20 <= len(ai_key) <= 500:
+                        raise ValueError("Enter a valid Anthropic API key")
+                    store_keychain_secret("anthropic", ai_key)
+                    write_json(self.server.state_dir / "ai_credentials.json",
+                               {"anthropic_api_keychain": True})
                 write_json(self.server.state_dir / "coach_config.json", config)
                 self._json({"saved": True})
             else:
