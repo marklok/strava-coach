@@ -1,0 +1,20 @@
+{
+  "timezone": "UTC",
+  "language": "English",
+  "goal": {"race_name": "Fictional Example 10K", "date": "2030-01-20", "distance_km": 10, "target_seconds": 3600},
+  "weeks": [
+    {"number": 1, "start": "2030-01-07", "training_km": 12, "phase": "Example base week", "context": "Synthetic demonstration only, not a training prescription.", "workouts": [
+      {"day": 1, "label": "Easy run", "segments": [{"intensity": "E", "km": 4}]},
+      {"day": 3, "label": "Easy run", "segments": [{"intensity": "E", "km": 3}]},
+      {"day": 6, "label": "Long easy run", "long_run": true, "segments": [{"intensity": "E", "km": 5}]}
+    ]},
+    {"number": 2, "start": "2030-01-14", "training_km": 9, "phase": "Example race week", "context": "Illustrates separate warm-up and race distance accounting.", "workouts": [
+      {"day": 1, "label": "Easy run", "segments": [{"intensity": "E", "km": 4}]},
+      {"day": 3, "label": "Easy run", "segments": [{"intensity": "E", "km": 3}]},
+      {"day": 6, "label": "Fictional race", "race": true, "segments": [{"intensity": "E", "km": 1}, {"intensity": "RACE", "km": 10}, {"intensity": "E", "km": 1}]}
+    ]}
+  ],
+  "profile": {},
+  "checkins": {},
+  "race_strategies": []
+}

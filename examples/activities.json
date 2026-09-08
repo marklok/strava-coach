@@ -1,0 +1,5 @@
+[
+  {"sport_type": "Run", "start_date": "2030-01-08T12:00:00Z", "name": "Synthetic easy run", "distance": 4000, "moving_time": 1440, "average_speed": 2.7777778, "average_heartrate": 135},
+  {"sport_type": "Run", "start_date": "2030-01-10T12:00:00Z", "name": "Synthetic easy run", "distance": 3000, "moving_time": 1140, "average_speed": 2.6315789},
+  {"sport_type": "Run", "start_date": "2030-01-13T12:00:00Z", "name": "Synthetic long run", "distance": 5000, "moving_time": 1800, "average_speed": 2.7777778, "average_heartrate": 140}
+]
