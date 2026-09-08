@@ -86,8 +86,14 @@
         <fieldset><legend>Running days</legend><div class="days" id="days"></div></fieldset>
         <label class="field"><span>Long-run day</span><select id="long-day"></select></label>
         <label class="field"><span>Additional context</span><textarea id="context" rows="5" placeholder="Travel, preferred rest days, missing Strava data, previous marathon experience…"></textarea><small>This note is saved locally with the draft.</small></label>
+        <div class="divider"><span>OPTIONAL AI COACHING</span></div>
+        <div class="connection">
+          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">Create or view an Anthropic API key ↗</a>
+          <p>The key is stored in macOS Keychain. It is used only when you run the weekly report with AI commentary enabled.</p>
+          <label class="field"><span>Anthropic API key</span><input id="anthropic-key" type="password" autocomplete="off" placeholder="Optional"></label>
+        </div>
         <div class="actions"><button data-back="training" class="ghost">Back</button><button id="generate" class="primary">Create draft <span>→</span></button></div>
-        <p id="plan-error" class="source error" role="alert"></p>
+        <p id="plan-error" class="form-error" role="alert"></p>
       </div>
 
       <div class="panel" id="draft">
