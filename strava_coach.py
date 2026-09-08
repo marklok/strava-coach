@@ -41,6 +41,8 @@ def credentials(state):
     values={key:os.environ.get(env) or saved.get(key) for key,env in mapping.items()}
     if not values.get('client_secret') and saved.get('client_secret_keychain') and values.get('client_id'):
         values['client_secret']=read_keychain_secret(f"strava:{values['client_id']}")
+    if not values.get('gmail_app_password') and saved.get('gmail_app_password_keychain') and values.get('gmail_sender'):
+        values['gmail_app_password']=read_keychain_secret(f"gmail:{values['gmail_sender']}")
     values['anthropic_api_key']=os.environ.get('ANTHROPIC_API_KEY') or ai_saved.get('anthropic_api_key')
     if not values['anthropic_api_key'] and ai_saved.get('anthropic_api_keychain'):
         values['anthropic_api_key']=read_keychain_secret('anthropic')
