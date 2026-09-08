@@ -105,7 +105,8 @@ def analyse_training(runs, today, tz):
 def race_candidates(runs, today, tz):
     earliest = today - timedelta(days=365)
     words = ("race", "marathon", "half", "10k", "5k", "løb", "lopp")
-    candidates = []
+    likely = []
+    fallback = {}
     for run in runs:
         run_date = activity_date(run, tz)
         if not earliest <= run_date <= today or run.get("sport_type", run.get("type")) not in RUN_TYPES:
@@ -115,15 +116,26 @@ def race_candidates(runs, today, tz):
         marked = run.get("workout_type") == 1
         named = any(word in str(run.get("name", "")).lower() for word in words)
         if abs(match[0] - km) / match[0] <= .05:
-            candidates.append({
+            seconds = run.get("elapsed_time") or run.get("moving_time")
+            candidate = {
                 "date": run_date.isoformat(), "name": str(run.get("name") or match[1]),
                 "distance_km": match[0], "recorded_km": round(km, 2),
-                "recorded_seconds": run.get("elapsed_time") or run.get("moving_time"),
+                "recorded_seconds": seconds,
                 "distance_label": match[1],
-                "confidence": "likely_race" if marked or named else "distance_match",
-            })
-    return sorted(candidates, key=lambda item: (item["confidence"] == "likely_race", item["date"]),
-                  reverse=True)[:12]
+                "confidence": "likely_race" if marked or named else "fastest_distance_match",
+            }
+            if marked or named:
+                likely.append(candidate)
+            elif seconds:
+                score = seconds / max(km, .001)
+                current = fallback.get(match[1])
+                if current is None or score < current[0]:
+                    fallback[match[1]] = (score, candidate)
+    likely = sorted(likely, key=lambda item: item["date"], reverse=True)[:8]
+    labelled_distances = {item["distance_label"] for item in likely}
+    fallbacks = [fallback[label][1] for _, label in RACE_DISTANCES
+                 if label in fallback and label not in labelled_distances]
+    return likely + fallbacks
 
 
 def readiness(baseline):
@@ -212,7 +224,13 @@ def draft_marathon_plan(data, today=None):
         race_date = date.fromisoformat(str(data.get("race_date", "")))
     except ValueError:
         raise ValueError("Choose your marathon and enter its race date") from None
-    first_monday = _monday_on_or_after(today)
+    try:
+        requested_start = date.fromisoformat(str(data.get("start_date") or today.isoformat()))
+    except ValueError:
+        raise ValueError("Enter a valid programme start date") from None
+    if requested_start < today:
+        raise ValueError("The programme start date cannot be in the past")
+    first_monday = _monday_on_or_after(requested_start)
     race_monday = race_date - timedelta(days=race_date.weekday())
     weeks = (race_monday - first_monday).days // 7 + 1
     if weeks < 12:
@@ -315,7 +333,9 @@ def draft_marathon_plan(data, today=None):
         "checkins": {}, "race_strategies": [],
         "planning_context": str(data.get("context", ""))[:4000],
         "plan_settings": {"aggressiveness": level.name, "draft": True,
-                          "starting_weekly_km": baseline["weekly_km"]},
+                          "starting_weekly_km": baseline["weekly_km"],
+                          "requested_start_date": requested_start.isoformat(),
+                          "first_training_week": first_monday.isoformat()},
     }
     load_plan(config)
     longest_planned = max(
