@@ -26,7 +26,9 @@ python coach_app.py
 
 Your browser opens a five-step private setup:
 
-1. Choose from 40 common Nordic, European, and US marathons, or enter another race.
+1. Choose from 40 common Nordic, European, and US marathons, or enter another race,
+   then choose when the programme should begin. The start defaults to today and
+   the first training week begins on the next Monday.
    A date is filled only when the organiser has published and the catalog has
    verified that edition; otherwise the app links to the official race site.
 2. Connect Strava or enter a recent 5K, 10K, half-marathon, or marathon result.
@@ -38,6 +40,14 @@ Your browser opens a five-step private setup:
    personal context, and optionally store an Anthropic API key for AI commentary.
 5. Review the draft, current-fitness training paces, weekly distance, and longest
    run before saving to `.private/coach_config.json`.
+
+After saving, refresh the live dashboard directly in the app. It uses the same
+compact layout as the email: last week's runs, matched-heart-rate pace, the coming
+week, and the remaining programme. When a saved plan and Strava connection exist,
+**Open my dashboard** also appears on the start screen. The final step can store a
+Gmail address, recipient, and Google app password, then send the current dashboard.
+Client secrets, Anthropic keys, and Gmail app passwords entered in the app stay in
+macOS Keychain.
 
 The Strava client secret and optional Anthropic key entered in the setup app are
 stored in macOS Keychain. OAuth tokens and the plan use owner-only files under `.private/`. The app listens only on
